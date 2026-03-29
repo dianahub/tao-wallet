@@ -265,15 +265,23 @@ def check_alpha_spikes(state):
 def check_twitter(state):
     seen = set(state.get("seen_tweet_ids", []))
     new_seen = set(seen)
+    feed_errors = state.setdefault("feed_error_last_alerted", {})
+    now_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     for account in TWITTER_ACCOUNTS:
         url = f"{NITTER_BASE}/{account}/rss"
         try:
             feed = feedparser.parse(url)
             if feed.bozo and not feed.entries:
-                send_telegram(f"⚠️ Twitter watcher: feed for @{account} is unavailable — alerts from this account are paused.")
+                # Only alert once per day per account
+                if feed_errors.get(account) != now_date:
+                    send_telegram(f"⚠️ Twitter watcher: feed for @{account} is unavailable — alerts from this account are paused.")
+                    feed_errors[account] = now_date
                 log(f"WARNING: RSS feed unavailable for @{account}")
                 continue
+            else:
+                # Feed recovered — clear the error date so we alert again if it goes down
+                feed_errors.pop(account, None)
 
             for entry in feed.entries:
                 tweet_id = entry.get("id", entry.get("link", ""))
