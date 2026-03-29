@@ -127,6 +127,26 @@ def get_tao_price():
         return None
 
 
+def get_tao_30d_change():
+    """Fetch 30-day price change % for TAO. Returns float or None."""
+    headers = {}
+    if CG_KEY and CG_KEY != "none":
+        headers["x-cg-demo-api-key"] = CG_KEY
+    try:
+        r = requests.get(
+            "https://api.coingecko.com/api/v3/coins/bittensor",
+            params={"localization": "false", "tickers": "false",
+                    "community_data": "false", "developer_data": "false"},
+            headers=headers,
+            timeout=10,
+        )
+        r.raise_for_status()
+        return r.json().get("market_data", {}).get("price_change_percentage_30d")
+    except Exception as e:
+        log(f"WARNING: Could not fetch 30d price change: {e}")
+        return None
+
+
 def get_portfolio_usd():
     try:
         with open(SNAP_FILE, "r") as f:
@@ -191,9 +211,16 @@ def check_price_alerts(state, tao_usd):
             start = datetime.fromisoformat(state["deploy_reminder_start"])
             days_elapsed = (datetime.now(timezone.utc) - start).days
             if days_elapsed >= DEPLOY_REMINDER_DAYS:
+                change_30d = get_tao_30d_change()
+                change_str = (
+                    f"\n30-day price change: {change_30d:+.1f}%"
+                    if change_30d is not None
+                    else ""
+                )
                 send_telegram(
                     f"⏰ It's been {DEPLOY_REMINDER_DAYS} days since setup.\n"
-                    f"Have you deployed all your capital?\nCurrent TAO price: ${tao_usd:.2f} USD"
+                    f"Have you deployed all your capital?\n"
+                    f"Current TAO price: ${tao_usd:.2f} USD{change_str}"
                 )
                 state["deploy_reminder_fired"] = True
                 log("ALERT: 14-day deploy reminder sent")
