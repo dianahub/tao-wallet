@@ -1,0 +1,22 @@
+# Secrets — never commit these
+.env
+*.json.tmp
+
+# State and logs — local only
+tao_alert_state.json
+tao_baseline.json
+tao_monitor.log
+tao_monitor_err.log
+tao_advisor.log
+tao_advisor_err.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
